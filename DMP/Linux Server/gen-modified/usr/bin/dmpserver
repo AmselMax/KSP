@@ -1,0 +1,184 @@
+#!/bin/bash
+
+# Config
+. /etc/dmpserver/dmpserver.cfg
+
+# Lib
+. /var/lib/dmpserver/dmpbashlib
+
+
+# Check for root
+rootCheck
+
+echo
+
+start(){
+    fileExistTest $DMPDIR/$1/DMPServer.exe
+    if [ $RETVAL == "False" ] ; then
+        echo -e "${formatDone}FATAL${formatEnd}: COULD NOT LOCATE THE DMPSERVER ENVIRONMENT!"
+        exit 2
+    fi
+
+    echo -n "Starting $SERVICENAME '$1' ... "
+    if [ ! -f $LOCKFILE.$1 ];
+    then
+        su $user -s $shell <<EOF
+        screen -S $1 -d -m mono $DMPDIR/$1/DMPServer.exe
+EOF
+        touch $LOCKFILE.$1
+
+        echo -e "${formatDone} SUCCESS ${formatEnd}"
+    else
+        echo -e "${formatFail} FAILURE ${formatEnd}"
+	echo
+        echo "$SERVICENAME '$1' is ${formatFail}ALREADY RUNNING${formatEnd} or ${formatFail} LOCKED FILE${formatEnd}"
+        echo
+	exit 2
+    fi
+}
+
+stop(){
+    echo -n "Shutting down $SERVICENAME '$1' ... : "
+
+    if [ -f $LOCKFILE.$1 ];
+    then
+        case "$2" in
+            -f) dmpcmd $1 shutdown -f ;;
+            *) dmpcmd $1 shutdown ;;
+        esac
+
+        rm -f $LOCKFILE.$1
+
+        echo -e "${formatDone} SUCCESS ${formatEnd}"
+	chmod -R 774 $DMPDIR/$1/Config/Settings.txt
+        echo
+	echo " Re-enabled settings from :"
+        echo
+        ls -l /srv/dmpserver/$1/Config/Settings.txt
+    else
+        echo -e "${formatFail} FAILURE ${formatEnd}"
+	echo
+        echo -e "$SERVICENAME '$1' is ${formatFail}NOT RUNNING${formatEnd} or ${formatFail}MISSING LOCK FILE${formatEnd}"
+	echo
+        exit 2
+    fi
+}
+
+restart(){
+    echo -n "Restarting $SERVICENAME '$1' ...  "
+    if [ -f $LOCKFILE.$1 ];
+    then
+        case "$2" in
+            -f) dmpcmd $1 restart -f ;;
+            *) dmpcmd $1 restart
+        esac
+    fi
+    echo -e "${formatFail} NOT RUNNING ! ${formatEnd}"
+}
+
+# AmselMax
+# Add Last log echo
+status(){
+    echo -n "Status of $SERVICENAME '$1' : "
+    if [ -f $LOCKFILE.$1 ];
+    then
+        echo -e "${formatDone} RUNNING ${formatEnd}"
+
+        echo
+        echo "Last log of $SERVICENAME '$1' :"
+        echo
+        echo " > \"$(ls -tr /srv/dmpserver/$1/logs/*.log | tail -1)\""
+        echo
+        cat "$(ls -tr /srv/dmpserver/$1/logs/*.log | tail -1)"
+	echo
+        exit 1
+    else
+        echo -e "${formatFail} NOT RUNNING ${formatEnd}"
+        echo
+        echo "Last log of $SERVICENAME '$1' :"
+        echo
+        echo " > \"$(ls -tr /srv/dmpserver/$1/logs/*.log | tail -1)\""
+        echo
+        cat "$(ls -tr /srv/dmpserver/$1/logs/*.log | tail -1)"
+        echo
+        exit 0
+    fi
+
+}
+
+update(){
+    dmpbashup
+}
+
+# Print usage if no arguments
+if [ $# -eq 0 ] ; then
+
+    echo -e "${formatFail}Missing argument !${formatEnd}"
+    echo
+    echo -e "Usage: $0 [server name] {${formatDone}start${formatEnd}|${formatFail}stop${formatEnd}|status|restart|${formatFail}stop-fast${formatEnd}|restart-fast}"
+fi
+
+# Manipulate default server when only one arg is used
+if [ $# -eq 1 ] ; then
+    case "$1" in
+        start) start default  ;;
+
+        stop) stop default  ;;
+
+        stop-fast) stop default -f  ;;
+
+        restart) restart default  ;;
+
+        restart-fast) restart default -f  ;;
+
+        status) status default  ;;
+
+        update)
+            update
+            echo "Update successful! Please restart DMPServer for changes to take effect."
+            ;;
+
+        *)
+            echo -e "${formatFail}Bad argument !${formatEnd}"
+            echo
+            echo -e "Usage: $0 [server name] {${formatDone}start${formatEnd}|${formatFail}stop${formatEnd}|status|restart|${formatFail}stop-fast${formatEnd}|restart-fast}"
+	    echo
+            exit 3
+            ;;
+    esac
+fi
+
+
+# Otherwise, manipulate the named server
+if [ $# -eq 2 ] ; then
+    case "$2" in
+        start) start $1  ;;
+
+        stop) stop $1  ;;
+
+        stop-fast) stop $1 -f  ;;
+
+        status) status $1  ;;
+
+        restart) restart $1  ;;
+
+        restart-fast) restart $1 -f  ;;
+
+        update)
+            update
+            echo "Update successful! Please restart DMPServer for changes to take effect."
+            ;;
+
+        *)
+	    echo -e "${formatFail}Bad argument !${formatEnd}"
+	    echo
+            echo "Usage: $0 [server name] {${formatDone}start${formatEnd}|${formatFail}stop${formatEnd}|status|restart|${formatFail}stop-fast${formatEnd}|restart-fast}"
+            echo
+	    exit 3
+            ;;
+    esac
+fi
+
+echo
+
+exit 0

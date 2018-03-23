@@ -1,0 +1,43 @@
+https://forum.kerbalspaceprogram.com/index.php?/topic/83603-dmp-linux-server-tools/
+
+Installation Instructions
+
+    Install mono, screen and curl ('apt-get install mono-complete screen curl' on debian/ubuntu)
+    Download pbinstall and run (copy the lines below into the terminal one by one, exactly as they are. Then read the disclaimer and press y or n). pbinstall will install DMPServer, the dmpserver daemon, dmpbashup, dmpenv, dmpcmd, and dmpbashlib
+
+
+cd ~ && mkdir dmpinstaller && cd dmpinstaller && curl -L http://pastebin.com/raw.php?i=42ypMCgb | tr -d '\r' > ./pbinstall && chmod +x ./pbinstall  # This will download and save the DMPServer bootstrap script to a file named 'pbinstall' in ~/dmpinstaller.
+
+su  # Enter your root password
+
+./pbinstall
+
+    Open any ports necessary.
+    Head over to /srv/dmpserver/default and modify the configuration files.
+    When you're done with the configuration, run 'sudo dmpserver restart' to restart the server and apply your new settings.
+    You can run 'sudo dmpserver update' or 'dmpbashup' to update the server. These commands can be run from anywhere.
+    Additionally, you can now install multiple servers using 'dmpenv install newservername'. This will install a new server environment in /srv/dmpserver with the specified name.
+    You can control the additional servers by doing 'dmpserver newservername {start|stop|etc}'.
+    Outdated links should get taken care of automagically by dmpbashup
+
+****
+
+cd ~ && mkdir dmpinstaller && cd dmpinstaller && curl -L http://pastebin.com/raw.php?i=42ypMCgb | tr -d '\r' > ./pbinstall && chmod +x ./pbinstall
+
+***
+
+
+
+DMPLinTools :
+
+Pastebin Bootstrap: http://pastebin.com/42ypMCgb
+
+    SOURCE
+
+    Daemon - http://pastebin.com/X4E46Af5
+
+    Updater - http://pastebin.com/Gx5wFtbx
+
+    Command Pipe - http://pastebin.com/ZTTUF4dH
+
+    Tools Config - http://pastebin.com/UHaknDCZ

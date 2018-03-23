@@ -1,0 +1,128 @@
+#!/bin/bash
+
+# LICENSE: SEE http://forum.kerbalspaceprogram.com/threads/92665-DMP-Linux-Server-Tools
+
+# Config
+. /etc/dmpserver/dmpserver.cfg
+
+# Lib
+. /var/lib/dmpserver/dmpbashlib
+
+
+# Check for root
+rootCheck
+
+
+## Hash Functions
+
+function buildHashList(){
+    curr_hash=()
+    
+    echo "Building Hash List"
+    h=0
+    for name in ${name_list[@]} ; do
+        curr_hash[$h]=$(sha256sum $DMPBIN/$name | awk -F " " '{print $1}')
+        ((h++))
+    done
+}
+
+function checkFileFreshness(){
+    diff_res=()
+    
+    echo "Getting File Freshness"
+    h=0
+    for hash in ${curr_hash[@]} ; do
+        diff <(echo $hash) <(echo ${hash_list[$h]}) &> /dev/null
+        diff_res[$h]="$?"
+        ((h++))
+    done
+}
+
+
+## Functions
+function dmpDirExists(){
+    dirExistTest $DMPBIN
+    if [ $RETVAL == "False" ] ; then
+        echo -e "${formatWarn}'$DMPBIN' does not exist! Please install with DMP Linux Tools,${formatEnd}"
+        echo -e "${formatWarn}create the directory with the proper permissions, or modify the${formatEnd}"
+        echo -e "${formatWarn}DMP binary install directory.${formatEnd}"
+        exit 2
+    fi
+}
+
+function buildTargetLists(){
+    echo "Generating Target Lists"
+    getTargetNames $REPOindex
+    name_list=("${RETVAL[@]}")
+    getTargetHashes $REPOindex
+    hash_list=("${RETVAL[@]}")
+}
+
+function checkTargetInstall(){
+    echo "Generating Missing Files"
+    for name in ${name_list[@]} ; do
+        fileExistTest $DMPBIN/$name
+        if [ ! $RETVAL == "True" ] ; then
+            # Make Missing File
+            echo "Adding missing file $name"
+            touch $DMPBIN/$name
+        fi
+    done
+}
+
+function updateOutdatedFiles(){
+    echo
+    echo
+    echo "Beginning DMPServer Update."
+    echo
+
+    environment_dirs=`ls -l --time-style="long-iso" $DMPDIR | egrep '^d' | awk '{print $8}'`
+    for env_dir in $environment_dirs ; do
+        dmpserver $env_dir stop-fast
+    done
+
+
+    findex=0
+    for res in ${diff_res[@]} ; do
+        if [ $res -eq 1 ];
+        then
+            echo "Updating ${name_list[$findex]}..."
+            curl --progress-bar $REPOobj/${hash_list[${findex}]} > $DMPBIN/${name_list[${findex}]}
+            echo -e "${name_list[${findex}]} Update is ${formatDone} DONE ${formatEnd}"
+        elif [ $res -eq 0 ];
+        then
+            echo -e "File ${name_list[${findex}]} is ${formatDone}up-to-date${formatEnd}."
+        else
+            echo "Something went wrong when updating! diff gave exit code of: $res ."
+            echo "Updater was expecting a 0 (up-to-date) or a 1 (out-of-date)."
+        fi
+        ((findex++))
+    done
+
+
+    echo "Updating DMPServer environment links."
+    
+    for env_dir in $environment_dirs ; do
+        dmpenv update $env_dir
+        dmpserver $env_dir start
+    done
+
+    
+    echo
+    echo "DMPServer Update Completed."
+}
+
+
+## Execution :
+
+dmpDirExists
+
+buildTargetLists
+
+checkTargetInstall
+
+buildHashList
+
+checkFileFreshness
+
+updateOutdatedFiles

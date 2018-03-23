@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Config
+. /etc/dmpserver/dmpserver.cfg
+
+# Lib
+. /var/lib/dmpserver/dmpbashlib
+
+# IFS Vars
+ifsNewline=$'\n'
+ifsReset=$IFS
+
+
+# Check for root
+rootCheck
+
+
+cd $DMPDIR
+
+function DMPPipe(){
+    su $user -s $shell <<EOF
+    if screen -list | grep -q $1 ; then screen -p 0 -S $1 -X stuff "/$2"$'\n' ; fi
+EOF
+}
+
+function sayShutdownMessage(){
+    IFS=$ifsNewline
+    for line in $shutdownMsg ; do
+        DMPPipe "say $line"
+        sleep 1
+    done
+    IFS=$ifsReset
+}
+
+case "$2" in
+    -m|-s|-message|-say)
+        DMPPipe $1 "say $3"
+        ;;
+        
+    shutdown)
+        sayShutdownMessage
+        case "$3" in
+            -f) :  ;;
+            *) sleep $shutdown_count  ;;
+        esac
+        DMPPipe $1 shutdown
+        ;;
+
+    restart)
+        sayShutdownMessage
+        case "$3" in
+            -f) :  ;;
+            *) sleep $shutdown_count  ;;
+        esac
+        DMPPipe $1 restart
+        ;;
+        
+    *)
+        DMPPipe $1 "$2"
+        ;;
+    
+esac
+exit 1

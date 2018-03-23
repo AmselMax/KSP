@@ -1,0 +1,111 @@
+#!/bin/bash
+
+# LICENSE: SEE http://forum.kerbalspaceprogram.com/threads/92665-DMP-Linux-Server-Tools
+
+# Config
+. /etc/dmpserver/dmpserver.cfg
+
+# Lib
+. /var/lib/dmpserver/dmpbashlib
+
+
+# Check for root
+rootCheck
+
+
+## Environment Functions
+function createLinks(){
+    for file in ${name_list[@]} ; do
+        echo ""
+        echo "Adding link from $1/$file to $2/$file"        
+        ln -s $1/$file $2/$file
+    done
+}
+
+function createLinksIfMissing(){
+    for file in ${name_list[@]} ; do
+        if [ ! -L $2/$file ] ; then
+            echo ""
+            echo "Adding missing link from $1/$file to $2/$file"
+            ln -s $1/$file $2/$file
+        fi
+    done
+}
+
+function dmpDirExists(){
+    dirExistTest $DMPBIN
+    if [ $RETVAL == "False" ] ; then
+        echo -e "${formatWarn}'$DMPBIN' does not exist! Please install with DMP Linux Tools,${formatEnd}"
+        echo -e "${formatWarn}create the directory with the proper permissions, or modify the${formatEnd}"
+        echo -e "${formatWarn}DMP binary install directory.${formatEnd}"
+        exit 2
+    fi
+}
+
+function dmpEnvDirExists(){
+    dirExistTest $DMPDIR
+    if [ $RETVAL == "False" ] ; then
+        echo -e "${formatWarn}'$DMPDIR' does not exist! Please install with DMP Linux Tools,${formatEnd}"
+        echo -e "${formatWarn}create the directory with the proper permissions, or modify the${formatEnd}"
+        echo -e "${formatWarn}DMP virtual environment directory.${formatEnd}"
+        exit 2
+    fi
+}
+
+function targetEnvDirExists(){
+    dirExistTest $DMPDIR/$1
+    if [ $RETVAL == "True" ] ; then
+        echo -e "${formatWarn}DMPServer Environment '$DMPDIR/$1' Exists!${formatEnd}"
+        if [ $2 == "continue" ] ; then
+            :
+        else
+            exit 2
+        fi
+    elif [ $RETVAL == "False" ] ; then
+        echo -e "${formatWarn}DMPServer Environment  '$DMPDIR/$1' Does Not Exist!${formatEnd}"
+        if [ $2 == "continue" ] ; then
+            exit 2
+        fi
+    fi
+}
+
+function makeTargetEnvDir(){
+    mkdir $DMPDIR/$1
+    chown $user:ksp $DMPDIR/$1
+    chmod 774 $DMPDIR/$1
+}
+
+function installEnvironment(){
+    echo "Installing DMPServer Environment"    
+    dmpDirExists
+    dmpEnvDirExists
+    targetEnvDirExists $1 "nope.avi"
+    makeTargetEnvDir $1
+    getTargetNames $REPOindex
+    name_list=("${RETVAL[@]}")
+    createLinks $DMPBIN $DMPDIR/$1
+    echo "Finished Installing DMPServer Environment"
+}
+
+function updateEnvironment(){
+    echo "Updating DMPServer Environment"
+    dmpDirExists
+    dmpEnvDirExists
+    targetEnvDirExists $1 "continue"
+    getTargetNames $REPOindex
+    name_list=("${RETVAL[@]}")
+    createLinksIfMissing $DMPBIN $DMPDIR/$1
+    echo "Finished Updating DMPServer Environment"
+}
+
+case "$1" in
+    install) installEnvironment $2  ;;
+
+    update) updateEnvironment $2  ;;
+
+    *)
+        echo "Usage: $0 {install|update} [server-name]"
+        exit 3
+        ;;
+esac
+exit 0
