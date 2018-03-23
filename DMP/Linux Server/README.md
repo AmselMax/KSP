@@ -10,6 +10,10 @@ DMP Linux Server Tools :
 
 https://forum.kerbalspaceprogram.com/index.php?/topic/83603-dmp-linux-server-tools/
 
- /!\ "curl" didn't work (for me) with php, I used :
+ /!\ 
+ 
+   curl http://pastebin.com/raw.php?i=...
+ 
+ didn't work (for me) with php, I used :
     
-    wget -q -O-
+    wget -q -O- http://pastebin.com/raw.php?i=...
