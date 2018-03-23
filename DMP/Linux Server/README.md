@@ -22,3 +22,16 @@ Use :
 ```
   wget -q -O- http://pastebin.com/raw.php?i=
 ```
+
+(And change in `dmpinstaller.sh`, in `getPBinScript()`)
+
+```
+...
+function getPBinScript(){
+    echo "Installing '$2'. File will be downloaded from ${PASTEBIN_API}$1"
+     wget -q -O- ${PASTEBIN_API}$1 | tr -d '\r' > $2
+    echo "Installed '$2'."
+    echo
+}
+...
+```
