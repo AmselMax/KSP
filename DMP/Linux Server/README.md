@@ -14,6 +14,11 @@ https://forum.kerbalspaceprogram.com/index.php?/topic/83603-dmp-linux-server-too
  
   curl http://pastebin.com/raw.php?i=...
  
- didn't work (for me) with php, I used :
- 
-   wget -q -O- http://pastebin.com/raw.php?i=...
+didn't work (now) with php and gives "HTTP/1.1 302 Moved Temporarily"
+Use :
+
+  curl -v http://pastebin.com/raw.php?i=
+   
+  or
+
+  wget -q -O- http://pastebin.com/raw.php?i=
